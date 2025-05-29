@@ -1,0 +1,219 @@
+import { cloudinary } from "../middleware/uploadPictureMiddleware.js";
+import Comment from "../models/Comment.js";
+import Jurnal from "../models/Jurnal.js";
+import { v4 as uuidv4} from "uuid";
+
+const createJurnal = async (req, res, next) => {
+    try {
+        const jurnal = new Jurnal({
+            name : "NEW JURNAL",
+            url : "https://www.com",
+            apc : 100000,
+            rating_avg : 5,
+            slug: uuidv4(),
+            contact: "08521608",
+            email : "@gmail.com",
+            cover: "",
+            user : req.user._id
+        });
+
+        const createdJurnal = await jurnal.save()
+        return res.json(createdJurnal)
+
+    } catch (error) {
+        next(error);
+    }
+}
+
+const updateJurnal = async (req, res, next) =>  {
+    try {
+        console.log("Request file:", req.file);
+
+        const jurnal = await Jurnal.findOne({ slug: req.params.slug });
+
+        if(!jurnal) {
+            return next(new Error("Jurnal not found"));
+        }
+
+        let requestData;
+        try {
+            requestData = JSON.parse(req.body.document);
+        } catch (error) {
+            return next(new Error("Invalid JSON format in request body"));
+        }
+
+        const { name, url, apc, rating_avg, slug, contact, email, institutions, columnstyles, countries, currencies, languages, publishperiods, ranks, tracks } = requestData;
+
+        jurnal.name = name || jurnal.name;
+        jurnal.url = url || jurnal.url;
+        jurnal.apc = apc || jurnal.apc;
+        jurnal.rating_avg = rating_avg || jurnal.rating_avg;
+        jurnal.slug = slug || jurnal.slug;
+        jurnal.contact = contact || jurnal.contact;
+        jurnal.email = email || jurnal.email;
+        jurnal.institutions = institutions || jurnal.institutions;
+        jurnal.columnstyles = columnstyles || jurnal.columnstyles;
+        jurnal.countries = countries || jurnal.countries;
+        jurnal.currencies = currencies || jurnal.currencies;
+        jurnal.languages = languages || jurnal.languages;
+        jurnal.publishperiods = publishperiods || jurnal.publishperiods;
+        jurnal.ranks = ranks || jurnal.ranks;
+        jurnal.tracks = tracks || jurnal.tracks;
+
+        if (req.file) {
+            console.log("Uploading new image to Cloudinary...")
+            try {
+                if (jurnal.cover) {
+                    console.log("Deleting old image: ", jurnal.cover);
+                    const publicId = jurnal.cover.split("/").pop().split(".")[0];
+                    await cloudinary.uploader.destroy(`post_images/${publicId}`);
+                }
+                jurnal.cover = req.file.path; 
+                console.log("New image uploaded:", jurnal.cover);
+            } catch (uploadError) {
+                return next(new Error(`Cloudinary error: ${uploadError.message}`));
+            }
+        } else {
+             console.log("No new image uploaded.");
+        }
+
+        const updatedJurnal = await jurnal.save();
+        return res.json(updatedJurnal);
+
+    } catch (error) {
+        next(error)
+    }
+}
+
+const getAllJurnals = async (req, res, next) => {
+  try {
+    const filter = req.query.searchKeyword || "";
+    const institutions = req.query.institutions ? req.query.institutions.split(",") : [];
+    const countries = req.query.countries ? req.query.countries.split(",") : [];
+    const currencies = req.query.currencies ? req.query.currencies.split(",") : [];
+    const languages = req.query.languages ? req.query.languages.split(",") : [];
+    const publishperiods = req.query.publishperiods ? req.query.publishperiods.split(",") : [];
+    const ranks = req.query.ranks ? req.query.ranks.split(",") : [];
+    const tracks = req.query.tracks ? req.query.tracks.split(",") : [];
+    const columnstyles = req.query.columnstyles ? req.query.columnstyles.split(",") : [];
+
+    let where = {};
+
+    if (filter) {
+      where.$or = [
+        { name: { $regex: filter, $options: "i" } },
+      ];
+    }
+
+    if (institutions.length > 0) where.institutions = { $in: institutions };
+    if (columnstyles.length > 0) where.columnstyles = { $in: columnstyles }; // ObjectId langsung
+    if (countries.length > 0) where.countries = { $in: countries };
+    if (currencies.length > 0) where.currencies = { $in: currencies };
+    if (languages.length > 0) where.languages = { $in: languages };
+    if (publishperiods.length > 0) where.publishperiods = { $in: publishperiods };
+    if (ranks.length > 0) where.ranks = { $in: ranks };
+    if (tracks.length > 0) where.tracks = { $in: tracks };
+
+    const page = parseInt(req.query.page) || 1;
+    const pageSize = parseInt(req.query.limit) || 10;
+    const skip = (page - 1) * pageSize;
+
+    const total = await Jurnal.countDocuments(where);
+    const pages = Math.ceil(total / pageSize);
+
+    res.header({
+      "x-filter": filter,
+      "x-totalcount": JSON.stringify(total),
+      "x-currentpage": JSON.stringify(page),
+      "x-pagesize": JSON.stringify(pageSize),
+      "x-totalpagecount": JSON.stringify(pages),
+    });
+
+    if (page > pages) return res.json([]);
+
+    const result = await Jurnal.find(where)
+      .skip(skip)
+      .limit(pageSize)
+      .populate([
+        { path: "user", select: ["avatar", "name", "verified"] },
+        { path: "institutions", select: ["name"] },
+        { path: "columnstyles", select: ["name"] }, 
+        { path: "countries", select: ["name"] },
+        { path: "currencies", select: ["name"] },
+        { path: "languages", select: ["name"] },
+        { path: "publishperiods", select: ["month"] },
+        { path: "ranks", select: ["name"] },
+        { path: "tracks", select: ["name"] },
+      ])
+      .sort({ updatedAt: "desc" });
+
+    return res.json(result);
+  } catch (error) {
+    next(error);
+  }
+};
+
+
+const deleteJurnal = async (req, res, next) => {
+    try {
+        const jurnal = await Jurnal.findOneAndDelete({ slug: req.params.slug })
+
+        if (!jurnal) {
+            return next(new Error("Jurnal not found"));
+        }
+
+        if (jurnal.cover) {
+            const publicId = jurnal.cover.split("/").pop().split(".")[0];
+            await cloudinary.uploader.destroy(`post_images/${publicId}`);
+        }
+
+        await Comment.deleteMany({ jurnal: jurnal._id });
+
+        return res.json({ message: "Jurnal successfully deleted"})
+
+    } catch (error) {
+        next(error)
+    }
+}
+
+const getJurnal = async (req, res, next) => {
+    try {
+        const jurnal = await Jurnal.findOne({ slug: req.params.slug }).populate([
+            { path: "user", select: ["avatar", "name"] },
+            { path: "institutions", select: ["name"] },
+            { path: "columnstyles", select: ["name", "description"] }, 
+            { path: "countries", select: ["name"] }, 
+            { path: "currencies", select: ["name", "symbol"] }, 
+            { path: "languages", select: ["name"] }, 
+            { path: "publishperiods", select: ["month"] },
+            { path: "ranks", select: ["name", "description"] },
+            { path: "tracks", select: ["name", "description"] },
+            {
+                path: "comments",
+                match: { check: true, parent: null },
+                populate: [
+                    { path: "user", select: ["avatar", "name"] },
+                    {
+                        path: "replies",
+                        match: { check: true },
+                        populate: [{ path: "user", select: ["avatar", "name"] }],
+                    },
+                ],
+            },
+        ]);
+
+        if (!jurnal) return next(new Error("Jurnal not found"));
+
+        return res.json(jurnal);
+    } catch (error) {
+        next(error);
+    }
+}
+
+export {
+    createJurnal,
+    updateJurnal,
+    getAllJurnals,
+    deleteJurnal,
+    getJurnal
+}

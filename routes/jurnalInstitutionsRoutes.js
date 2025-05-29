@@ -1,0 +1,17 @@
+import express from 'express';
+const router = express.Router();
+import { createJurnalInstitution, getSingleInstitution, getAllJurnalInstitutions, updateJurnalInstitution, deleteJurnalInstitutions } from '../controllers/jurnalInstitutionsController.js';
+import { adminGuard, authGuard } from '../middleware/authMiddleware.js';
+
+router
+    .route("/")
+    .post(authGuard, adminGuard, createJurnalInstitution)
+    .get(getAllJurnalInstitutions)
+
+router  
+    .route('/:jurnalInstitutionId')
+    .get(getSingleInstitution)
+    .put(authGuard, adminGuard, updateJurnalInstitution)
+    .delete(authGuard, adminGuard, deleteJurnalInstitutions)
+
+export default router;
