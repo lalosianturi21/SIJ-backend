@@ -2,6 +2,8 @@ import { cloudinary } from "../middleware/uploadPictureMiddleware.js";
 import Comment from "../models/Comment.js";
 import Jurnal from "../models/Jurnal.js";
 import { v4 as uuidv4} from "uuid";
+import { Parser } from 'json2csv'; // Tambahkan ini di atas
+
 
 const createJurnal = async (req, res, next) => {
     try {
@@ -210,10 +212,63 @@ const getJurnal = async (req, res, next) => {
     }
 }
 
+const exportJurnalCSV = async (req, res, next) => {
+  try {
+    // Fetch data from the database (you can add any necessary filters here)
+    const jurnals = await Jurnal.find({}).populate([
+      { path: "user", select: "name" },
+      { path: "institutions", select: "name" },
+      { path: "columnstyles", select: "name" },
+      { path: "countries", select: "name" },
+      { path: "currencies", select: "name" },
+      { path: "languages", select: "name" },
+      { path: "publishperiods", select: "month" },
+      { path: "ranks", select: "name" },
+      { path: "tracks", select: "name" },
+    ]);
+
+    // Format the data for CSV
+    const data = jurnals.map((j) => ({
+      name: j.name,
+      url: j.url,
+      apc: j.apc,
+      rating_avg: j.rating_avg,
+      contact: j.contact,
+      email: j.email,
+      tracks: j.tracks.map(t => t.name).join(", "),
+      columnstyles: j.columnstyles.map(c => c.name).join(", "),
+      countries: j.countries.map(c => c.name).join(", "),
+      currencies: j.currencies.map(c => c.name).join(", "),
+      institutions: j.institutions.map(i => i.name).join(", "),
+      languages: j.languages.map(l => l.name).join(", "),
+      publishperiods: j.publishperiods.map(p => p.month).join(", "),
+      ranks: j.ranks.map(r => r.name).join(", "),
+      createdAt: new Date(j.createdAt).toLocaleDateString("en-US", {
+        day: "numeric",
+        month: "short",
+        year: "numeric",
+      }),
+    }));
+
+    // Convert data to CSV
+    const json2csvParser = new Parser();
+    const csv = json2csvParser.parse(data);
+
+    // Send the CSV file in the response
+    res.header("Content-Type", "text/csv");
+    res.attachment("jurnals.csv");
+    res.send(csv);
+  } catch (error) {
+    next(error);
+  }
+};
+
+
 export {
     createJurnal,
     updateJurnal,
     getAllJurnals,
     deleteJurnal,
-    getJurnal
+    getJurnal,
+    exportJurnalCSV
 }
