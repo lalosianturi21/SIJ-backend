@@ -1,12 +1,16 @@
 import express from 'express';
 const router = express.Router();
-import { createJurnalColumnStyle, getSingleColumnStyle, getAllJurnalColumnStyles, updateJurnalColumnStyle, deleteJurnalColumnStyles } from '../controllers/jurnalColumnStylesController.js';
+import { createJurnalColumnStyle, getSingleColumnStyle, getAllJurnalColumnStyles, updateJurnalColumnStyle, deleteJurnalColumnStyles, getAllJurnalColumnStylesWithoutLimit } from '../controllers/jurnalColumnStylesController.js';
 import { adminGuard, authGuard } from '../middleware/authMiddleware.js';
 
 router
     .route("/")
     .post(authGuard, adminGuard, createJurnalColumnStyle)
     .get(getAllJurnalColumnStyles)
+
+router
+    .route("/countcolumnstyles")
+    .get(getAllJurnalColumnStylesWithoutLimit)
 
 router  
     .route('/:jurnalColumnStyleId')

@@ -78,6 +78,30 @@ const getAllJurnalTracks = async (req, res, next) => {
     }
 }
 
+
+const getAllJurnalTracksWithoutLimit = async (req, res, next) => {
+  try {
+    const filter = req.query.searchKeyword;
+    let where = {};
+
+    if (filter) {
+      where.name = { $regex: filter, $options: "i" };
+    }
+
+    const result = await JurnalTracks.find(where).sort({ updatedAt: "desc" });
+
+    res.header({
+      "x-filter": filter || "",
+      "x-totalcount": JSON.stringify(result.length),
+    });
+
+    return res.json(result);
+  } catch (error) {
+    next(error);
+  }
+};
+
+
 const updateJurnalTrack = async (req, res, next) => {
     try {
         const { name } = req.body;

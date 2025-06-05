@@ -1,12 +1,16 @@
 import express from 'express';
 const router = express.Router();
-import { createJurnalPublishPeriods, getSinglePublishPeriod, getAllJurnalPublishPeriods, updateJurnalPublishPeriod, deleteJurnaPublishPeriods } from '../controllers/jurnalPublishPeriodsController.js';
+import { createJurnalPublishPeriods, getSinglePublishPeriod, getAllJurnalPublishPeriods, updateJurnalPublishPeriod, deleteJurnaPublishPeriods, getAllJurnalPublishPeriodsWithoutLimit } from '../controllers/jurnalPublishPeriodsController.js';
 import { adminGuard, authGuard } from '../middleware/authMiddleware.js';
 
 router
     .route('/')
     .post(authGuard, adminGuard, createJurnalPublishPeriods)
     .get(getAllJurnalPublishPeriods)
+
+router
+    .route("/countpublishperiods")
+    .get(getAllJurnalPublishPeriodsWithoutLimit)
 
 router
     .route("/:jurnalPublishPeriodId")

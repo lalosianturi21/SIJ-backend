@@ -1,7 +1,7 @@
 import express from "express";
 import { adminGuard, authGuard } from "../middleware/authMiddleware.js";
 import { uploadPicture } from "../middleware/uploadPictureMiddleware.js";
-import { createJurnal, updateJurnal, getAllJurnals, deleteJurnal, getJurnal, exportJurnalCSV } from "../controllers/jurnalController.js";
+import { createJurnal, updateJurnal, getAllJurnals, deleteJurnal, getJurnal, exportJurnalCSV, getAllJurnalsWithoutLimit } from "../controllers/jurnalController.js";
 
 const router = express.Router();
 
@@ -10,6 +10,10 @@ router
     .route("/")
     .post(authGuard, adminGuard, createJurnal)
     .get(getAllJurnals)
+
+router
+    .route("/countjurnals")
+    .get(getAllJurnalsWithoutLimit)
 
 router
     .route("/export")

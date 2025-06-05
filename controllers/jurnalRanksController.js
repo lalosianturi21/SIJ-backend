@@ -78,6 +78,29 @@ const getAllJurnalRanks = async (req, res, next) => {
     }
 }
 
+const getAllJurnalRanksWithoutLimit = async (req, res, next) => {
+  try {
+    const filter = req.query.searchKeyword;
+    let where = {};
+
+    if (filter) {
+      where.name = { $regex: filter, $options: "i" };
+    }
+
+    const result = await JurnalRanks.find(where).sort({ updatedAt: "desc" });
+
+    res.header({
+      "x-filter": filter || "",
+      "x-totalcount": JSON.stringify(result.length),
+    });
+
+    return res.json(result);
+  } catch (error) {
+    next(error);
+  }
+};
+
+
 const updateJurnalRank = async (req, res, next) => {
     try {
         const { name } = req.body;
@@ -130,5 +153,6 @@ export {
     getSingleRank,
     getAllJurnalRanks,
     updateJurnalRank,
-    deleteJurnalRanks
+    deleteJurnalRanks,
+    getAllJurnalRanksWithoutLimit
 }

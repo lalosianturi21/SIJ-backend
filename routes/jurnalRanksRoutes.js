@@ -1,12 +1,17 @@
 import express from 'express';
 const router = express.Router();
-import { createJurnalRank, getSingleRank, getAllJurnalRanks, updateJurnalRank, deleteJurnalRanks } from '../controllers/jurnalRanksController.js';
+import { createJurnalRank, getSingleRank, getAllJurnalRanks, updateJurnalRank, deleteJurnalRanks, getAllJurnalRanksWithoutLimit } from '../controllers/jurnalRanksController.js';
 import { adminGuard, authGuard } from '../middleware/authMiddleware.js';
 
 router
     .route("/")
     .post(authGuard, adminGuard, createJurnalRank)
     .get(getAllJurnalRanks)
+
+router
+    .route("/countranks")
+    .get(getAllJurnalRanksWithoutLimit)
+
 
 router  
     .route('/:jurnalRankId')

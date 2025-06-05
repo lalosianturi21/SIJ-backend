@@ -78,6 +78,29 @@ const getAllJurnalPublishPeriods = async (req, res, next) => {
     }
 }
 
+const getAllJurnalPublishPeriodsWithoutLimit = async (req, res, next) => {
+  try {
+    const filter = req.query.searchKeyword;
+    let where = {};
+
+    if (filter) {
+      where.month = { $regex: filter, $options: "i" };
+    }
+
+    const result = await JurnalPublishPeriods.find(where).sort({ updatedAt: "desc" });
+
+    res.header({
+      "x-filter": filter || "",
+      "x-totalcount": JSON.stringify(result.length),
+    });
+
+    return res.json(result);
+  } catch (error) {
+    next(error);
+  }
+};
+
+
 const updateJurnalPublishPeriod = async (req, res, next) => {
     try {
         const { month } = req.body;
@@ -128,5 +151,6 @@ export {
     getSinglePublishPeriod,
     getAllJurnalPublishPeriods,
     updateJurnalPublishPeriod,
-    deleteJurnaPublishPeriods
+    deleteJurnaPublishPeriods,
+    getAllJurnalPublishPeriodsWithoutLimit
 }

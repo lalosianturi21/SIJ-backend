@@ -81,6 +81,29 @@ const getAllJurnalLanguages = async (req, res, next) => {
 
 }
 
+const getAllJurnalLanguagesWithoutLimit = async (req, res, next) => {
+  try {
+    const filter = req.query.searchKeyword;
+    let where = {};
+
+    if (filter) {
+      where.name = { $regex: filter, $options: "i" };
+    }
+
+    const result = await JurnalLanguages.find(where).sort({ updatedAt: "desc" });
+
+    res.header({
+      "x-filter": filter || "",
+      "x-totalcount": JSON.stringify(result.length),
+    });
+
+    return res.json(result);
+  } catch (error) {
+    next(error);
+  }
+};
+
+
 
 const updateJurnalLanguage = async (req, res, next) => {
     try {
@@ -132,5 +155,6 @@ export {
     getSingleLanguage,
     getAllJurnalLanguages,
     updateJurnalLanguage,
-    deleteJurnalLanguages
+    deleteJurnalLanguages,
+    getAllJurnalLanguagesWithoutLimit
 }

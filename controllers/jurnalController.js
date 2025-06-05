@@ -156,6 +156,60 @@ const getAllJurnals = async (req, res, next) => {
 };
 
 
+const getAllJurnalsWithoutLimit = async (req, res, next) => {
+  try {
+    const filter = req.query.searchKeyword || "";
+    const institutions = req.query.institutions ? req.query.institutions.split(",") : [];
+    const countries = req.query.countries ? req.query.countries.split(",") : [];
+    const currencies = req.query.currencies ? req.query.currencies.split(",") : [];
+    const languages = req.query.languages ? req.query.languages.split(",") : [];
+    const publishperiods = req.query.publishperiods ? req.query.publishperiods.split(",") : [];
+    const ranks = req.query.ranks ? req.query.ranks.split(",") : [];
+    const tracks = req.query.tracks ? req.query.tracks.split(",") : [];
+    const columnstyles = req.query.columnstyles ? req.query.columnstyles.split(",") : [];
+
+    let where = {};
+
+    if (filter) {
+      where.$or = [
+        { name: { $regex: filter, $options: "i" } },
+      ];
+    }
+
+    if (institutions.length > 0) where.institutions = { $in: institutions };
+    if (columnstyles.length > 0) where.columnstyles = { $in: columnstyles };
+    if (countries.length > 0) where.countries = { $in: countries };
+    if (currencies.length > 0) where.currencies = { $in: currencies };
+    if (languages.length > 0) where.languages = { $in: languages };
+    if (publishperiods.length > 0) where.publishperiods = { $in: publishperiods };
+    if (ranks.length > 0) where.ranks = { $in: ranks };
+    if (tracks.length > 0) where.tracks = { $in: tracks };
+
+    const result = await Jurnal.find(where)
+      .populate([
+        { path: "user", select: ["avatar", "name", "verified"] },
+        { path: "institutions", select: ["name"] },
+        { path: "columnstyles", select: ["name"] },
+        { path: "countries", select: ["name"] },
+        { path: "currencies", select: ["name"] },
+        { path: "languages", select: ["name"] },
+        { path: "publishperiods", select: ["month"] },
+        { path: "ranks", select: ["name"] },
+        { path: "tracks", select: ["name"] },
+      ])
+      .sort({ updatedAt: "desc" });
+
+    res.header({
+      "x-totalcount": JSON.stringify(result.length),
+    });
+
+    return res.json(result);
+  } catch (error) {
+    next(error);
+  }
+};
+
+
 const deleteJurnal = async (req, res, next) => {
     try {
         const jurnal = await Jurnal.findOneAndDelete({ slug: req.params.slug })
@@ -270,5 +324,6 @@ export {
     getAllJurnals,
     deleteJurnal,
     getJurnal,
-    exportJurnalCSV
+    exportJurnalCSV,
+    getAllJurnalsWithoutLimit
 }
