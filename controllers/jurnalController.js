@@ -38,12 +38,11 @@ const createJurnal = async (req, res, next) => {
     }
 };
 
-const updateJurnal = async (req, res, next) =>  {
+const updateJurnal = async (req, res, next) => {
     try {
         console.log("Request file:", req.file);
 
         const jurnal = await Jurnal.findOne({ slug: req.params.slug });
-
         if (!jurnal) {
             return next(new Error("Jurnal not found"));
         }
@@ -55,17 +54,25 @@ const updateJurnal = async (req, res, next) =>  {
             return next(new Error("Invalid JSON format in request body"));
         }
 
-        const { name, url, apc, rating_avg, slug, contact, email, institutions, columnstyles, countries, currencies, languages, publishperiods, ranks, tracks } = requestData;
+        const {
+            name, url, apc, rating_avg, slug,
+            contact, email, institutions, columnstyles,
+            countries, currencies, languages, publishperiods,
+            ranks, tracks
+        } = requestData;
 
-        // ✅ Validasi: Jangan biarkan name duplikat (kecuali itu jurnal yang sama)
-        if (name && name !== jurnal.name) {
-            const existingJurnal = await Jurnal.findOne({ name });
+        // ✅ Validasi: Cek duplikat name (case-insensitive), kecuali milik sendiri
+        if (name && name.toLowerCase() !== jurnal.name.toLowerCase()) {
+            const existingJurnal = await Jurnal.findOne({
+                name: { $regex: `^${name}$`, $options: 'i' }
+            });
+
             if (existingJurnal && existingJurnal._id.toString() !== jurnal._id.toString()) {
                 return next(new Error("Jurnal name already exists"));
             }
         }
 
-        // Update data
+        // 📝 Update fields jika ada
         jurnal.name = name || jurnal.name;
         jurnal.url = url || jurnal.url;
         jurnal.apc = apc || jurnal.apc;
@@ -82,7 +89,7 @@ const updateJurnal = async (req, res, next) =>  {
         jurnal.ranks = ranks || jurnal.ranks;
         jurnal.tracks = tracks || jurnal.tracks;
 
-        // Handle image upload
+        // 🖼️ Handle image upload ke Cloudinary
         if (req.file) {
             console.log("Uploading new image to Cloudinary...");
             try {
@@ -107,6 +114,7 @@ const updateJurnal = async (req, res, next) =>  {
         next(error);
     }
 };
+
 
 
 const getAllJurnals = async (req, res, next) => {
