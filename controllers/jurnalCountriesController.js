@@ -153,5 +153,6 @@ export {
     getSingleCountry,
     getAllJurnalCountries,
     updateJurnalCountry,
-    deleteJurnalCountries
+    deleteJurnalCountries,
+    getAllJurnalCountriesWithoutLimit
 }

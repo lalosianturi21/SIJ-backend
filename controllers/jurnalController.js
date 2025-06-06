@@ -7,25 +7,36 @@ import { Parser } from 'json2csv'; // Tambahkan ini di atas
 
 const createJurnal = async (req, res, next) => {
     try {
+        const { name = "NEW JURNAL" } = req.body;
+        const slug = uuidv4();
+
+        // Auto rename if duplicate
+        let finalName = name;
+        let counter = 1;
+        while (await Jurnal.findOne({ name: finalName })) {
+            finalName = `${name} ${counter}`;
+            counter++;
+        }
+
         const jurnal = new Jurnal({
-            name : "NEW JURNAL",
-            url : "https://www.com",
-            apc : 100000,
-            rating_avg : 5,
-            slug: uuidv4(),
+            name: finalName,
+            url: "https://www.com",
+            apc: 100000,
+            rating_avg: 5,
+            slug,
             contact: "08521608",
-            email : "@gmail.com",
+            email: "@gmail.com",
             cover: "",
-            user : req.user._id
+            user: req.user._id
         });
 
-        const createdJurnal = await jurnal.save()
-        return res.json(createdJurnal)
+        const createdJurnal = await jurnal.save();
+        return res.status(201).json(createdJurnal);
 
     } catch (error) {
         next(error);
     }
-}
+};
 
 const updateJurnal = async (req, res, next) =>  {
     try {
@@ -33,7 +44,7 @@ const updateJurnal = async (req, res, next) =>  {
 
         const jurnal = await Jurnal.findOne({ slug: req.params.slug });
 
-        if(!jurnal) {
+        if (!jurnal) {
             return next(new Error("Jurnal not found"));
         }
 
@@ -46,6 +57,15 @@ const updateJurnal = async (req, res, next) =>  {
 
         const { name, url, apc, rating_avg, slug, contact, email, institutions, columnstyles, countries, currencies, languages, publishperiods, ranks, tracks } = requestData;
 
+        // ✅ Validasi: Jangan biarkan name duplikat (kecuali itu jurnal yang sama)
+        if (name && name !== jurnal.name) {
+            const existingJurnal = await Jurnal.findOne({ name });
+            if (existingJurnal && existingJurnal._id.toString() !== jurnal._id.toString()) {
+                return next(new Error("Jurnal name already exists"));
+            }
+        }
+
+        // Update data
         jurnal.name = name || jurnal.name;
         jurnal.url = url || jurnal.url;
         jurnal.apc = apc || jurnal.apc;
@@ -62,30 +82,32 @@ const updateJurnal = async (req, res, next) =>  {
         jurnal.ranks = ranks || jurnal.ranks;
         jurnal.tracks = tracks || jurnal.tracks;
 
+        // Handle image upload
         if (req.file) {
-            console.log("Uploading new image to Cloudinary...")
+            console.log("Uploading new image to Cloudinary...");
             try {
                 if (jurnal.cover) {
                     console.log("Deleting old image: ", jurnal.cover);
                     const publicId = jurnal.cover.split("/").pop().split(".")[0];
                     await cloudinary.uploader.destroy(`post_images/${publicId}`);
                 }
-                jurnal.cover = req.file.path; 
+                jurnal.cover = req.file.path;
                 console.log("New image uploaded:", jurnal.cover);
             } catch (uploadError) {
                 return next(new Error(`Cloudinary error: ${uploadError.message}`));
             }
         } else {
-             console.log("No new image uploaded.");
+            console.log("No new image uploaded.");
         }
 
         const updatedJurnal = await jurnal.save();
         return res.json(updatedJurnal);
 
     } catch (error) {
-        next(error)
+        next(error);
     }
-}
+};
+
 
 const getAllJurnals = async (req, res, next) => {
   try {
